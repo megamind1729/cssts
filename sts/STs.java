@@ -60,7 +60,6 @@ public class STs implements reachability.IncrementalReachability {
 		if (p.x.equals(i)) {
 			return p.y < this.lengths[p.x] - 1 ? p.y + 1 : -1;
 		} else {
-			//int v = this.ssts.get(p.x).get(i).getMin(p.y);
 			int v = this.sts.get(p.x).get(i).sumRange(p.y, this.getChainLength(p.x)-1);
 			return v < Integer.MAX_VALUE ? v : -1;
 		}

@@ -1,8 +1,9 @@
 package cssts;
 
+
 public class SparseSegmentTree implements reachability.SegmentTree {
 
-	private static final int BLOCK_SIZE = 128;
+	private static final int BLOCK_SIZE = 32;
 	
 	class SegmentTreeNode {
 		public int start, end;
@@ -38,6 +39,18 @@ public class SparseSegmentTree implements reachability.SegmentTree {
 			this.level = level;
 		}
 		
+		public SegmentTreeNode(int start, int end, int pos, int val, int level, int activeStart, int activeEnd) {
+			this.start = start;
+			this.end = end;
+			this.left = null;
+			this.right = null;
+			this.min = val;
+			this.pos = pos;
+			this.activeStart = activeStart;
+			this.activeEnd = activeEnd;
+			this.level = level;
+		}
+		
 		public String toString() {
 			return "node: " + System.identityHashCode(this)  + 
 				   ", left: " + System.identityHashCode(this.left) + 
@@ -70,9 +83,13 @@ public class SparseSegmentTree implements reachability.SegmentTree {
 		if (otherCurrent == null) {
 			return null;
 		} else {
-			SegmentTreeNode thisCurrent = new SegmentTreeNode(otherCurrent.start, otherCurrent.end, otherCurrent.level);
-			thisCurrent.min = otherCurrent.min;
-			thisCurrent.pos = otherCurrent.pos;
+			SegmentTreeNode thisCurrent = new SegmentTreeNode(otherCurrent.start, otherCurrent.end, 
+															  otherCurrent.pos, otherCurrent.min, 
+															  otherCurrent.level, otherCurrent.activeStart,
+															  otherCurrent.activeEnd);
+			
+			if (otherCurrent.block != null) 
+				thisCurrent.block = new Block(otherCurrent.block);
 
 			if (otherCurrent.left != null) {
 				thisCurrent.left = this.buildTree(other, otherCurrent.left);

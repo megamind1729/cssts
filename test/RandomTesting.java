@@ -1,17 +1,8 @@
 package test;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.Serializable;
-import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.HashSet;
+
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
-import java.util.Set;
 
 import util.Pair;
 
@@ -45,7 +36,7 @@ public class RandomTesting {
 		}
 	}
 	
-	private static class Action implements Serializable {
+	private static class Action {
 		Operation op;
 		Pair<Integer, Integer> source, target;
 
@@ -169,5 +160,5 @@ public class RandomTesting {
 		
 		System.out.println("Matching results: " + this.po.resultMatchMap);
 	}
-
+	
 }

@@ -66,6 +66,7 @@ public class Block {
 
 	public Block(Block other) {
 		this.maxLevel = other.maxLevel;
+		this.offset = other.offset;
 		root = buildTree(other, other.root);
 	}
 
@@ -77,6 +78,7 @@ public class Block {
 			thisCurrent.min = otherCurrent.min;
 			thisCurrent.isLeaf = otherCurrent.isLeaf;
 			thisCurrent.pos = otherCurrent.pos;
+			
 			if (otherCurrent.block != null)
 				thisCurrent.block = Arrays.copyOf(otherCurrent.block, otherCurrent.block.length);
 

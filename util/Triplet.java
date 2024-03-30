@@ -4,6 +4,7 @@ public class Triplet<X, Y, Z> {
 	  public X x; 
 	  public Y y; 
 	  public Z z; 
+	  
 	  public Triplet(X x, Y y, Z z) { 
 	    this.x = x; 
 	    this.y = y; 
@@ -24,7 +25,7 @@ public class Triplet<X, Y, Z> {
 	  
 	  public boolean equals(Object o) {
 		  Triplet<X, Y, Z> other = (Triplet<X, Y, Z>) o;
-		  return this.x.equals(other.x) && this.y.equals(other.y);  
+		  return this.x.equals(other.x) && this.y.equals(other.y) && this.z.equals(other.z);  
 	  }
 	  
 	  public String toString() {
