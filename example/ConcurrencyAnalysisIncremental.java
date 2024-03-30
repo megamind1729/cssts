@@ -4,24 +4,22 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-import cssts.CSSTs;
+import cssts.IncrementalCSSTs;
 import util.Pair;
 import util.RandomEngine;
 
-public class FullyDynamicAnalysis {
+public class ConcurrencyAnalysisIncremental {
 	
 	private int[] chainLengths;
-	private CSSTs partialOrder;
+	private IncrementalCSSTs partialOrder;
 	private RandomEngine randomEngine;
-	Set<Pair<Pair<Integer, Integer>, Pair<Integer, Integer>>> insertedEdges;
 	
 	private static int SEED = 100;
 	 
-	public FullyDynamicAnalysis(int[] chainLengths) {
+	public ConcurrencyAnalysisIncremental(int[] chainLengths) {
 		this.chainLengths = Arrays.copyOf(chainLengths, chainLengths.length);
-		this.partialOrder = new CSSTs(this.chainLengths);
+		this.partialOrder = new IncrementalCSSTs(this.chainLengths);
 		this.randomEngine = new RandomEngine(SEED);
-		this.insertedEdges = new HashSet<>();
 	}
 		
 	private int getNumThreads() {
@@ -38,10 +36,6 @@ public class FullyDynamicAnalysis {
 	     return this.randomEngine.getRandomBoolean();
 	}
 	
-	private boolean shouldDeleteEdges(Pair<Integer, Integer> event) {
-	     return this.randomEngine.getRandomBoolean();
-	}
-	
 	public void doAnalysis() {
 		System.out.println("Performing analysis\n");
 		for (int threadId = 0; threadId < this.getNumThreads(); threadId++) {
@@ -53,7 +47,6 @@ public class FullyDynamicAnalysis {
 	
 	void processEvent(Pair<Integer, Integer> currentEvent) {
 		System.out.println("Processing the event: " + currentEvent);
-		
 		if (shouldAddEdges(currentEvent)) {
 			for (Pair<Integer, Integer> conflictingEvent : findConflictingEvents(currentEvent)) {
 				
@@ -62,42 +55,10 @@ public class FullyDynamicAnalysis {
 					
 					System.out.println(String.format("\tInserting the edge %s -> %s", currentEvent, conflictingEvent));
 					this.partialOrder.insertEdge(currentEvent, conflictingEvent);
-					insertedEdges.add(new Pair<>(currentEvent, conflictingEvent));
 				}
 			}
-		} 
-		
-		if (shouldDeleteEdges(currentEvent)) {
-			for (Pair<Pair<Integer, Integer>, Pair<Integer, Integer>> eventPair : findRemoveEdges(currentEvent)) {
-				System.out.println(String.format("\tDeleting the edge %s -> %s", eventPair.x, eventPair.y));
-				this.partialOrder.deleteEdge(eventPair.x, eventPair.y);
-			}
 		}
-		
 		System.out.println("");
-	}
-	
-	private Set<Pair<Pair<Integer, Integer>, Pair<Integer, Integer>>> findRemoveEdges(Pair<Integer, Integer> event) {
-		Set<Pair<Pair<Integer, Integer>, Pair<Integer, Integer>>> removeEdges = new HashSet<>();
-		
-		if (this.insertedEdges.size() == 0)
-			return removeEdges;
-		
-		do {
-			int index = this.randomEngine.getRandomIntInRange(0, this.insertedEdges.size());
-			Pair<Pair<Integer, Integer>, Pair<Integer, Integer>> removedEdge = null;
-			for(Pair<Pair<Integer, Integer>, Pair<Integer, Integer>> eventPair : insertedEdges) {
-			    if (index == 0) {
-			    	removeEdges.add(eventPair);
-			    	removedEdge = eventPair;
-			    	break;
-			    }
-			    index--;
-			}
-			insertedEdges.remove(removedEdge);
-		} while(this.randomEngine.getRandomBoolean() && this.insertedEdges.size() > 0);
-
-		return removeEdges;
 	}
 	
 	private Set<Pair<Integer, Integer>> findConflictingEvents(Pair<Integer, Integer> event) {
@@ -127,7 +88,7 @@ public class FullyDynamicAnalysis {
 	
 	public static void main(String[] args) {
 		int [] chainLengths = {100, 100, 100, 100, 100};
-		FullyDynamicAnalysis analysis = new FullyDynamicAnalysis(chainLengths);
+		ConcurrencyAnalysisIncremental analysis = new ConcurrencyAnalysisIncremental(chainLengths);
 		analysis.doAnalysis();
 	}
 }
