@@ -3,7 +3,8 @@ package util;
 public class Pair<X, Y> { 
 	  public X x; 
 	  public Y y;
-	  
+	  private static final int PAIR_VERBOSE_LEVEL = 1;
+
 	  public Pair(X x, Y y) { 
 	    this.x = x; 
 	    this.y = y; 
@@ -17,9 +18,14 @@ public class Pair<X, Y> {
 	  		return this.y;
 	  }
 	 
-	  public boolean equals(Pair<X, Y> o) {
-		  Pair<X, Y> other = (Pair<X, Y>) o;
-		  return this.x.equals(other.x) && this.y.equals(other.y);  
+	  @Override
+	  public boolean equals(Object o) {
+		  if (this == o) return true;
+		  if (o == null || getClass() != o.getClass()) return false;
+		  Pair<?, ?> pair = (Pair<?, ?>) o;
+		  boolean result = x.equals(pair.x) && y.equals(pair.y);
+		  if(PAIR_VERBOSE_LEVEL >= 3) { System.out.println("[ Pair ]: Comparing " + this + " with " + pair + ": " + result); }
+		  return result;
 	  }
 	  
 	  public String toString() {

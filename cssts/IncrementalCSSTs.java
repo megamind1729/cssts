@@ -17,6 +17,7 @@ public class IncrementalCSSTs implements reachability.IncrementalReachability {
 	private int width;
 	private int[] lengths;
 	public List<Map<Integer, SparseSegmentTree>> ssts;
+	private static final int VERBOSE_LEVEL = 1;
 	
 
 	public IncrementalCSSTs(int[] lengths) {
@@ -94,6 +95,7 @@ public class IncrementalCSSTs implements reachability.IncrementalReachability {
 		Set<Pair<Pair<Integer, Integer>, Pair<Integer, Integer>>> addedEdges = new HashSet<Pair<Pair<Integer, Integer>, Pair<Integer, Integer>>>();
 
 		if (this.reachable(from, to)) {
+			if (VERBOSE_LEVEL >= 3) { System.out.println("[ IncrementalCSSTs ]: Edge already exists"); }
 			return addedEdges;
 		}
 

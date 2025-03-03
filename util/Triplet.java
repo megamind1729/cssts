@@ -24,7 +24,9 @@ public class Triplet<X, Y, Z> {
 	  }
 	  
 	  public boolean equals(Object o) {
-		  Triplet<X, Y, Z> other = (Triplet<X, Y, Z>) o;
+		  if (this == o) return true;
+		  if (o == null || getClass() != o.getClass()) return false;
+		  Triplet<?, ?, ?> other = (Triplet<?, ?, ?>) o;
 		  return this.x.equals(other.x) && this.y.equals(other.y) && this.z.equals(other.z);  
 	  }
 	  
