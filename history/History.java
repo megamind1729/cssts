@@ -3,11 +3,11 @@ package history;
 import java.util.*;
 // import java.util.function.Consumer;
 import java.util.stream.Collectors;
-
 import history.ParseHistoryError.InternalConsistencyError;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 
@@ -35,11 +35,11 @@ public class History {
     //     return new HistoryChecker(this, onViolation, reportMode);
     // }
 
-    // public HistoryStats stats() {
-    //     int numSessions = this.sessions.size();
-    //     int numTransactions = this.sessions.stream().mapToInt(List::size).sum();
-    //     return new HistoryStats(numSessions, numTransactions);
-    // }
+    public HistoryStats stats() {
+        int numSessions = this.sessions.size();
+        int numTransactions = this.sessions.stream().mapToInt(List::size).sum();
+        return new HistoryStats(numSessions, numTransactions);
+    }
 
     public static History parsePlumeHistory(Path path) throws IOException, ParseHistoryError {
         long startTime = System.nanoTime();
@@ -61,7 +61,7 @@ public class History {
         Set<Key> keys = new HashSet<>();
 
         for (String line : contents.split("\n")) {
-            System.out.println("Parsing Line: " + line);   // Debugging
+            // System.out.println("Parsing Line: " + line);   // Debugging
             line = line.trim();
             if (line.isEmpty()) {
                 continue;
@@ -108,7 +108,7 @@ public class History {
 
             event.sessId = sIdx;
             event.txnId = tIdx;
-            System.out.println("Event: " + event);   // Debugging
+            // System.out.println("Event: " + event);   // Debugging
 
             if(event instanceof Event.Write) {
                 if (history.writeMap.containsKey(kv)) {
@@ -176,7 +176,7 @@ public class History {
 
                 for (String eventString : eventStrings) {
                     eventString = eventString.trim();
-                    System.out.println("Parsing Event: " + eventString);   // Debugging
+                    // System.out.println("Parsing Event: " + eventString);   // Debugging
                     if (eventString.isEmpty()) {
                         continue;
                     }
@@ -206,7 +206,7 @@ public class History {
                     keys.add(key);
                     event.sessId = sIdx;
                     event.txnId = tIdx;
-                    System.out.println("Event: " + event);   // Debugging
+                    // System.out.println("Event: " + event);   // Debugging
                     events.add(event);
                 }
 
@@ -233,28 +233,42 @@ public class History {
     }
 
     // Checks Internal Consistency and returns a reduced history, with each transaction having only the last write for each key and only the reads that are not preceded by writes to the same key in the same transaction.
-    public History reduceHistory() throws InternalConsistencyError {
+    public ReducedHistory reduceHistory() throws ParseHistoryError {
         
         long startTime = System.nanoTime();
         System.err.println("[ reduceHistory ] startTime: " + startTime / 1_000_000.0 + " ms");    
     
-        History reducedHistory = new History();
+        ReducedHistory reducedHistory = new ReducedHistory();
         reducedHistory.keys = new HashSet<>(this.keys);
         reducedHistory.abortedWrites = new HashSet<>(this.abortedWrites);
+        reducedHistory.writeMap = new HashMap<>();
 
         for (List<Transaction> session : this.sessions) {
-            List<Transaction> reducedSession = new ArrayList<>();
+            List<ReducedTransaction> reducedSession = new ArrayList<>();
             for (Transaction transaction : session) {
                 Map<Key, Event.Write> lastWrites = new HashMap<>();
+                Map<Key, Event.Read> firstReads = new HashMap<>();
                 List<Event> reducedEvents = new ArrayList<>();
 
                 for (Event event : transaction.events) {
                     if (event instanceof Event.Write) {
                         lastWrites.put(((Event.Write) event).getKv().getKey(), (Event.Write) event);
+                        if(reducedHistory.writeMap.containsKey(((Event.Write) event).getKv())) {
+                            throw new ParseHistoryError.NotUniqueWrites(((Event.Write) event).getKv());
+                        }
+                        reducedHistory.writeMap.put(((Event.Write) event).getKv(), (Event.Write) event);
                     } else if (event instanceof Event.Read) {
                         Key key = ((Event.Read) event).getKv().getKey();
                         if (!lastWrites.containsKey(key)) {
-                            reducedEvents.add(event);
+                            if(!firstReads.containsKey(key)) {
+                                firstReads.put(key, (Event.Read) event);
+                            }
+                            else{
+                                KeyValuePair kv = ((Event.Read) event).getKv();
+                                if (!kv.getValue().equals(firstReads.get(key).getKv().getValue())) {
+                                    throw new InternalConsistencyError("Read value does not match the first read value in the same transaction.");
+                                }
+                            }                            
                         } else {
                             KeyValuePair kv = ((Event.Read) event).getKv();
                             if (!kv.getValue().equals(lastWrites.get(key).getKv().getValue())) {
@@ -263,9 +277,7 @@ public class History {
                         }
                     }
                 }
-
-                reducedEvents.addAll(lastWrites.values());
-                reducedSession.add(new Transaction(reducedEvents));
+                reducedSession.add(new ReducedTransaction(firstReads, lastWrites));
             }
             reducedHistory.sessions.add(reducedSession);
         }

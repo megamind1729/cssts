@@ -3,8 +3,8 @@ package partialorder;
 import history.Event;
 import history.Key;
 import history.KeyValuePair;
-import history.Transaction;
-import history.History;
+import history.ReducedTransaction;
+import history.ReducedHistory;
 
 import java.util.HashMap;
 import java.util.List;
@@ -20,7 +20,7 @@ public class EventMaps {
     public Map<Pair<Integer, Integer>, Map<Key, Event.Read>> beforeR_x;
     public Map<Integer, Map<Event.Write, Event.Read>> fp;
 
-    public EventMaps(History history) {
+    public EventMaps(ReducedHistory history) {
         long startTime = System.nanoTime(); System.err.println("\t[ EventMaps ] startTime: " + startTime / 1_000_000.0 + " ms"); 
         long t_prev = startTime; long t_curr = t_prev; // Debugging
         this.afterW_x = computeAfterW_x(history);
@@ -40,21 +40,21 @@ public class EventMaps {
     }
     
     // Returns a map from a transaction to the first write event on the same key, that succeeds it (current transaction included) in the same session
-    public static Map<Pair<Integer, Integer>, Map<Key, Event.Write>> computeAfterW_x(History history) {
+    public static Map<Pair<Integer, Integer>, Map<Key, Event.Write>> computeAfterW_x(ReducedHistory history) {
         
         Map<Pair<Integer, Integer>, Map<Key, Event.Write>> map = new HashMap<>();
         for (int sIdx = 0; sIdx < history.sessions.size(); sIdx++) {
-            List<Transaction> session = history.sessions.get(sIdx);
+            List<ReducedTransaction> session = history.sessions.get(sIdx);
             Map<Key, Event.Write> lastWriteMap = new HashMap<>();
             for (int tIdx = session.size() - 1; tIdx >= 0; tIdx--) {
-                Transaction transaction = session.get(tIdx);
-                for (int eIdx = transaction.events.size() - 1; eIdx >= 0; eIdx--) {
-                    Event e = transaction.events.get(eIdx);
-                    if(e instanceof Event.Write) {
-                        lastWriteMap.put(((Event.Write) e).getKv().getKey(), (Event.Write) e);
-                    }
-                }
+                ReducedTransaction transaction = session.get(tIdx);
                 map.put(new Pair<>(sIdx, tIdx), new HashMap<>(lastWriteMap));
+
+                for (Map.Entry<Key, Event.Write> entry : transaction.lastWrites.entrySet()) {
+                    Key key = entry.getKey();
+                    Event.Write writeEvent = entry.getValue();
+                    lastWriteMap.put(key, writeEvent);
+                }
             }
         }
         return map;
@@ -82,20 +82,20 @@ public class EventMaps {
     // }
 
     // Returns a map from a transaction to the first read event on the same key, that succeeds it (current transaction included) in the same session
-    public static Map<Pair<Integer, Integer>, Map<Key, Event.Read>> computeAfterR_x(History history) {
+    public static Map<Pair<Integer, Integer>, Map<Key, Event.Read>> computeAfterR_x(ReducedHistory history) {
         Map<Pair<Integer, Integer>, Map<Key, Event.Read>> map = new HashMap<>();
         for (int sIdx = 0; sIdx < history.sessions.size(); sIdx++) {
-            List<Transaction> session = history.sessions.get(sIdx);
+            List<ReducedTransaction> session = history.sessions.get(sIdx);
             Map<Key, Event.Read> lastReadMap = new HashMap<>();
             for (int tIdx = session.size() - 1; tIdx >= 0; tIdx--) {
-                Transaction transaction = session.get(tIdx);
-                for (int eIdx = transaction.events.size() - 1; eIdx >= 0; eIdx--) {
-                    Event e = transaction.events.get(eIdx);
-                    if(e instanceof Event.Read) {
-                        lastReadMap.put(((Event.Read) e).getKv().getKey(), (Event.Read) e);
-                    }
-                }
+                ReducedTransaction transaction = session.get(tIdx);
                 map.put(new Pair<>(sIdx, tIdx), new HashMap<>(lastReadMap));
+
+                for (Map.Entry<Key, Event.Read> entry : transaction.firstReads.entrySet()) {
+                    Key key = entry.getKey();
+                    Event.Read readEvent = entry.getValue();
+                    lastReadMap.put(key, readEvent);
+                }
             }
         }
         return map;
@@ -124,60 +124,61 @@ public class EventMaps {
     // }
 
     // Returns a map from a transaction to the first write event on the same key, that preceeds it (current transaction included) in the same session
-    public static Map<Pair<Integer, Integer>, Map<Key, Event.Write>> computeBeforeW_x(History history) {
+    public static Map<Pair<Integer, Integer>, Map<Key, Event.Write>> computeBeforeW_x(ReducedHistory history) {
         Map<Pair<Integer, Integer>, Map<Key, Event.Write>> map = new HashMap<>();
         for (int sIdx = 0; sIdx < history.sessions.size(); sIdx++) {
-            List<Transaction> session = history.sessions.get(sIdx);
+            List<ReducedTransaction> session = history.sessions.get(sIdx);
             Map<Key, Event.Write> lastWriteMap = new HashMap<>();
             for (int tIdx = 0; tIdx < session.size(); tIdx++) {
-                Transaction transaction = session.get(tIdx);
-                for (int eIdx = 0; eIdx < transaction.events.size(); eIdx++) {
-                    Event e = transaction.events.get(eIdx);
-                    if(e instanceof Event.Write) {
-                        lastWriteMap.put(((Event.Write) e).getKv().getKey(), (Event.Write) e);
-                    }
-                }
+                ReducedTransaction transaction = session.get(tIdx);
                 map.put(new Pair<>(sIdx, tIdx), new HashMap<>(lastWriteMap));
+
+                for (Map.Entry<Key, Event.Write> entry : transaction.lastWrites.entrySet()) {
+                    Key key = entry.getKey();
+                    Event.Write writeEvent = entry.getValue();
+                    lastWriteMap.put(key, writeEvent);
+                }
             }
         }
         return map;
     }
 
-    // Returns a map from a transaction to the first read event on the same key, that preceeds it (current transaction included) in the same session
-    public static Map<Pair<Integer, Integer>, Map<Key, Event.Read>> computeBeforeR_x(History history) {
+    // Returns a map from a transaction to the first read event on the same key, that precedes it (current transaction included) in the same session
+    public static Map<Pair<Integer, Integer>, Map<Key, Event.Read>> computeBeforeR_x(ReducedHistory history) {
         Map<Pair<Integer, Integer>, Map<Key, Event.Read>> map = new HashMap<>();
         for (int sIdx = 0; sIdx < history.sessions.size(); sIdx++) {
-            List<Transaction> session = history.sessions.get(sIdx);
+            List<ReducedTransaction> session = history.sessions.get(sIdx);
             Map<Key, Event.Read> lastReadMap = new HashMap<>();
             for (int tIdx = 0; tIdx < session.size(); tIdx++) {
-                Transaction transaction = session.get(tIdx);
-                for (int eIdx = 0; eIdx < transaction.events.size(); eIdx++) {
-                    Event e = transaction.events.get(eIdx);
-                    if(e instanceof Event.Read) {
-                        lastReadMap.put(((Event.Read) e).getKv().getKey(), ((Event.Read) e));
-                    }
-                }
+                ReducedTransaction transaction = session.get(tIdx);
                 map.put(new Pair<>(sIdx, tIdx), new HashMap<>(lastReadMap));
+
+                for (Map.Entry<Key, Event.Read> entry : transaction.firstReads.entrySet()) {
+                    Key key = entry.getKey();
+                    Event.Read readEvent = entry.getValue();
+                    lastReadMap.put(key, readEvent);
+                }
             }
         }
         return map;
     }
 
     // Returns a map from a write event to the last read event that reads the same key value pair in all session
-    public static Map<Integer, Map<Event.Write, Event.Read>> computeFp(History history) {
+    public static Map<Integer, Map<Event.Write, Event.Read>> computeFp(ReducedHistory history) {
         Map<Integer, Map<Event.Write, Event.Read>> map = new HashMap<>();
         for(int sIdx = 0; sIdx < history.sessions.size(); sIdx++) {
             Map<Event.Write, Event.Read> lastReadMap = new HashMap<>();
-            List<Transaction> session = history.sessions.get(sIdx);
+            List<ReducedTransaction> session = history.sessions.get(sIdx);
             for(int tIdx = 0; tIdx < session.size(); tIdx++) {
-                Transaction transaction = session.get(tIdx);
-                for(Event e : transaction.events) {
-                    if(e instanceof Event.Read) {
-                        KeyValuePair kv = ((Event.Read) e).getKv();
-                        Event.Write w = history.writeMap.get(kv);
-                        if(w != null) {
-                            lastReadMap.put(w, (Event.Read) e);
-                        }
+                ReducedTransaction transaction = session.get(tIdx);
+                
+                for (Map.Entry<Key, Event.Read> entry : transaction.firstReads.entrySet()) {
+                    Key key = entry.getKey();
+                    Event.Read e = entry.getValue();
+                    KeyValuePair kv = e.getKv();
+                    Event.Write w = history.writeMap.get(kv);
+                    if(w != null) {
+                        lastReadMap.put(w, e);
                     }
                 }
             }
