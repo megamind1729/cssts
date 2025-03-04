@@ -42,6 +42,9 @@ public class History {
     // }
 
     public static History parsePlumeHistory(Path path) throws IOException, ParseHistoryError {
+        long startTime = System.nanoTime();
+        System.err.println("[ parsePlumeHistory ] startTime: " + startTime / 1_000_000.0 + " ms");
+
         if (!Files.isDirectory(path)) {
             throw new ParseHistoryError.NotADirectory(path);
         }
@@ -125,6 +128,10 @@ public class History {
         // history.sessions.add(Collections.singletonList(initTransaction));
 
         history.keys = keys;
+        
+        long endTime = System.nanoTime(); System.err.println("[ parsePlumeHistory ] endTime: " + endTime / 1_000_000.0 + " ms");
+        System.err.println("[ parsePlumeHistory ] Time taken: " + (endTime - startTime) / 1_000_000.0 + " ms");
+
         return history;
     }
 
@@ -138,6 +145,9 @@ public class History {
     }
 
     public static History parseTestHistory(Path path) throws IOException, ParseHistoryError {
+        long startTime = System.nanoTime();
+        System.err.println("[ parseTestHistory ] startTime: " + startTime / 1_000_000.0 + " ms");
+
         String contents = Files.readString(path);
         History history = new History();
         String[] sessionStrings = contents.split("=");
@@ -207,11 +217,27 @@ public class History {
         }
 
         history.keys = keys;
+
+        long endTime = System.nanoTime();
+        System.err.println("[ parseTestHistory ] endTime: " + endTime / 1_000_000.0 + " ms");
+        System.err.println("[ parseTestHistory ] Time taken: " + (endTime - startTime) / 1_000_000.0 + " ms");
+
         return history;
+    }
+
+    public void serializeTestHistory(Path path) throws IOException {
+        Path filePath = path;
+        try (BufferedWriter writer = Files.newBufferedWriter(filePath)) {
+            writer.write(new TestHistoryDisplay(this).toString());
+        }
     }
 
     // Checks Internal Consistency and returns a reduced history, with each transaction having only the last write for each key and only the reads that are not preceded by writes to the same key in the same transaction.
     public History reduceHistory() throws InternalConsistencyError {
+        
+        long startTime = System.nanoTime();
+        System.err.println("[ reduceHistory ] startTime: " + startTime / 1_000_000.0 + " ms");    
+    
         History reducedHistory = new History();
         reducedHistory.keys = new HashSet<>(this.keys);
         reducedHistory.abortedWrites = new HashSet<>(this.abortedWrites);
@@ -243,6 +269,10 @@ public class History {
             }
             reducedHistory.sessions.add(reducedSession);
         }
+
+        long endTime = System.nanoTime();
+        System.err.println("[ reduceHistory ] endTime: " + endTime / 1_000_000.0 + " ms");
+        System.err.println("[ reduceHistory ] Time taken: " + (endTime - startTime) / 1_000_000.0 + " ms");
 
         return reducedHistory;
     }

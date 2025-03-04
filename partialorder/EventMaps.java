@@ -21,15 +21,27 @@ public class EventMaps {
     public Map<Integer, Map<Event.Write, Event.Read>> fp;
 
     public EventMaps(History history) {
+        long startTime = System.nanoTime(); System.err.println("\t[ EventMaps ] startTime: " + startTime / 1_000_000.0 + " ms"); 
+        long t_prev = startTime; long t_curr = t_prev; // Debugging
         this.afterW_x = computeAfterW_x(history);
+        t_curr = System.nanoTime(); System.err.println("\t[ EventMaps ] AfterW_x: " + (t_curr - t_prev) / 1_000_000.0 + " ms"); t_prev = t_curr;
         this.afterR_x = computeAfterR_x(history);
+        t_curr = System.nanoTime(); System.err.println("\t[ EventMaps ] AfterR_x: " + (t_curr - t_prev) / 1_000_000.0 + " ms"); t_prev = t_curr;
         this.beforeW_x = computeBeforeW_x(history);
+        t_curr = System.nanoTime(); System.err.println("\t[ EventMaps ] BeforeW_x: " + (t_curr - t_prev) / 1_000_000.0 + " ms"); t_prev = t_curr;
         this.beforeR_x = computeBeforeR_x(history);
+        t_curr = System.nanoTime(); System.err.println("\t[ EventMaps ] BeforeR_x: " + (t_curr - t_prev) / 1_000_000.0 + " ms"); t_prev = t_curr;
         this.fp = computeFp(history);
+        t_curr = System.nanoTime(); System.err.println("\t[ EventMaps ] F_p: " + (t_curr - t_prev) / 1_000_000.0 + " ms"); t_prev = t_curr;
+
+        long endTime = System.nanoTime(); // Debugging
+        System.err.println("\t[ EventMaps ] endTime: " + endTime / 1_000_000.0 + " ms. Time taken: " + (endTime - startTime) / 1_000_000.0 + " ms");       
+
     }
     
     // Returns a map from a transaction to the first write event on the same key, that succeeds it (current transaction included) in the same session
     public static Map<Pair<Integer, Integer>, Map<Key, Event.Write>> computeAfterW_x(History history) {
+        
         Map<Pair<Integer, Integer>, Map<Key, Event.Write>> map = new HashMap<>();
         for (int sIdx = 0; sIdx < history.sessions.size(); sIdx++) {
             List<Transaction> session = history.sessions.get(sIdx);
@@ -176,6 +188,8 @@ public class EventMaps {
 
     @Override
     public String toString() {
+        long startTime = System.nanoTime(); System.err.println("\t[ EventMaps.toString() ] startTime: " + startTime / 1_000_000.0 + " ms");
+
         StringBuilder sb = new StringBuilder();
         sb.append("AfterW_x:\n");
         for (Map.Entry<Pair<Integer, Integer>, Map<Key, Event.Write>> entry : afterW_x.entrySet()) {
@@ -202,6 +216,10 @@ public class EventMaps {
             sb.append("Key: ").append(entry.getKey())
               .append(", Value: ").append(entry.getValue()).append("\n");
         }
+
+        long endTime = System.nanoTime(); // Debugging
+        System.err.println("\t[ EventMaps.toString() ] endTime: " + endTime / 1_000_000.0 + " ms. Time taken: " + (endTime - startTime) / 1_000_000.0 + " ms");
+
         return sb.toString();
     }
 }

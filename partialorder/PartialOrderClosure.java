@@ -14,6 +14,9 @@ import java.util.*;
 public class PartialOrderClosure {
 
     public static IncrementalCSSTs Closure(History history) {
+        
+        long startTime = System.nanoTime(); System.err.println("[ Closure ] startTime: " + startTime / 1_000_000.0 + " ms");    
+    
         // Initialization
 
         // System.out.println("\nA." + history); // Debugging
@@ -35,6 +38,7 @@ public class PartialOrderClosure {
         System.out.println(eventMaps);
 
         // Push the write-read edges
+        long t_curr = System.nanoTime(); System.err.println("[ Closure ] [ " + (t_curr - startTime) / 1_000_000.0 + " ms ] Initialized. Now, pushing wr edges to DS"); long t_prev = t_curr;
         for (int sIdx = 0; sIdx < width; sIdx++) {
             for (int tIdx = 0; tIdx < sessionLengths[sIdx]; tIdx++) {
                 Transaction t = history.sessions.get(sIdx).get(tIdx);
@@ -52,6 +56,8 @@ public class PartialOrderClosure {
                             }
                             else if(DS.reachable(sIdx_tIdx, w.getSessTxnPair())){
                                 System.out.println("w is reachable from r. Closure not feasible."); // Debugging
+                                long endTime = System.nanoTime(); // Profiling
+                                System.err.println("[ Closure ] endTime: " + endTime / 1_000_000.0 + " ms, Time taken: " + (endTime - startTime) / 1_000_000.0 + " ms");
                                 return null;
                             }
                             else if(DS.reachable(w.getSessTxnPair(), sIdx_tIdx)){
@@ -71,6 +77,9 @@ public class PartialOrderClosure {
         }
 
         // Push partial-order edges
+        t_curr = System.nanoTime(); 
+        System.err.println("[ Closure ] [ " + (t_curr - startTime) / 1_000_000.0 + " ms ] Time taken for pushing wr edges: " + (t_curr - t_prev) / 1_000_000.0 + " ms. Now, Starting ObsClosure on initial edges."); t_prev = t_curr;
+
         for (int sIdx1 = 0; sIdx1 < width; sIdx1++) {
             for(int tIdx1 = 0; tIdx1 < sessionLengths[sIdx1]; tIdx1++) {
                 for (int sIdx2 = 0; sIdx2 < width; sIdx2++) {
@@ -86,14 +95,26 @@ public class PartialOrderClosure {
             }
         }
 
+        int whileLoopCounter = 0;
+        int obsClosureCounter = 0;
+
+        t_curr = System.nanoTime(); long t1 = t_curr;
+        System.err.println("[ Closure ] [ " + (t_curr - startTime) / 1_000_000.0 + " ms ] Time taken for initial ObsClosures: " + (t_curr - t_prev) / 1_000_000.0 + " ms. Starting while loop."); t_prev = t_curr;
+        
         // Main computation
         while (!Q.isEmpty()) {
+            t_curr = System.nanoTime(); System.err.println("[ Closure ] [ " + (t_curr - startTime) / 1_000_000.0 + " ms ] Inside while loop (" + whileLoopCounter + "): " + (t_curr - t_prev) / 1_000_000.0 + " ms"); t_prev = t_curr;
+            whileLoopCounter++;
+            
             System.out.println("\nQueue elements: " + Q);
             Pair<Pair<Integer, Integer>, Pair<Integer, Integer>> edge = Q.poll();
             Pair<Integer, Integer> e1 = edge.getX();
             Pair<Integer, Integer> e2 = edge.getY();
 
             if (DS.reachable(e2, e1)) {
+                t_curr = System.nanoTime(); // Profiling
+                System.err.println("[ Closure ] [ " + (t_curr - startTime) / 1_000_000.0 + " ms ] Ending Closure. Time taken for all while loop iterations: " + (t_curr - t1) / 1_000_000.0 + " ms");
+                System.err.println("[ Closure ] While loop iterations: " + whileLoopCounter + ", ObsClosure calls: " + obsClosureCounter);
                 return null; // Return ⊥
             }
             else if (Objects.equals(e1, e2)) {
@@ -105,10 +126,15 @@ public class PartialOrderClosure {
                 System.out.println("Added edges: " + addedEdges); // Debugging
 
                 for (Pair<Pair<Integer, Integer>, Pair<Integer, Integer>> insertedEdge : addedEdges) {
+                    obsClosureCounter++;
                     ObsClosure(insertedEdge.getX(), insertedEdge.getY(), Q, history, eventMaps);
                 }
             }
         }
+
+        t_curr = System.nanoTime(); // Profiling
+        System.err.println("[ Closure ] [ " + (t_curr - startTime) / 1_000_000.0 + " ms ] Ending Closure. Time taken for all while loop iterations: " + (t_curr - t1) / 1_000_000.0 + " ms");
+        System.err.println("[ Closure ] While loop iterations: " + whileLoopCounter + ", ObsClosure calls: " + obsClosureCounter);
 
         return DS; // At this point DS represents the closure of P
     }
