@@ -35,11 +35,11 @@ public class History {
     //     return new HistoryChecker(this, onViolation, reportMode);
     // }
 
-    public HistoryStats stats() {
-        int numSessions = this.sessions.size();
-        int numTransactions = this.sessions.stream().mapToInt(List::size).sum();
-        return new HistoryStats(numSessions, numTransactions);
-    }
+    // public HistoryStats stats() {
+    //     int numSessions = this.sessions.size();
+    //     int numTransactions = this.sessions.stream().mapToInt(List::size).sum();
+    //     return new HistoryStats(numSessions, numTransactions);
+    // }
 
     public static History parsePlumeHistory(Path path) throws IOException, ParseHistoryError {
         long startTime = System.nanoTime();
